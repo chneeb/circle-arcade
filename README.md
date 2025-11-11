@@ -3,7 +3,7 @@
 The Arcade Suite consist of 4 classic retro games: Tetris, Space Invaders, Snake and Pong and a simple menu. The games are built using Circle - a C++ bare metal programming environment for the Raspberry Pi.
 To compile and set up the suite, follow the steps below. Circle is included as a submodule, but requires some initial setup.
 
-The games themselves are pretty straight forward and it should be fairy easy to expand or modify them. If you wish to change or add new adio or graphics you need to comply to a few constraints. The audio must be exported as raw (headerless),signed 16-bit PCM data using e.i. Audacity. The graphics are loaded as rgb565 LMI files (see #https://github.com/general-ackbar/lmiencoder).
+The games themselves are pretty straight forward and it should be fairy easy to expand or modify them. If you wish to change or add new adio or graphics you need to comply to a few constraints. The audio must be exported as raw (headerless),signed 16-bit PCM data using e.i. Audacity. The graphics are loaded as rgb565 LMI files (see https://github.com/general-ackbar/lmiencoder for pure MacOS version or https://github.com/general-ackbar/img2lmi for platform independent utility).
 
 This version is optimized for the Raspberry Pi 1, using one USB-controller. Video output through either composite or HDMI and audio through jack.
 
