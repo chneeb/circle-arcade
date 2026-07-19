@@ -26,7 +26,7 @@ FontWriter::FontWriter(const char *filename, Size dimensions)
 
 
 
-void FontWriter::Write(int x, int y, CString text, C2DGraphics *graphics, C2DGraphics::TTextAlign alignment, TScreenColor transparent)
+void FontWriter::Write(int x, int y, CString text, C2DGraphics *graphics, C2DGraphics::TTextAlign alignment, TRawPixel transparent)
 {
     //assume 16 char width
     
@@ -56,7 +56,7 @@ void FontWriter::Write(int x, int y, CString text, C2DGraphics *graphics, C2DGra
         source_x = (index % 16) * fontsize.width;
         source_y = (index / 16) * fontsize.heigt;
 
-        graphics->DrawImageRectTransparent(dx, dy, fontsize.width, fontsize.heigt, source_x, source_y,  font->getWidth(), font->getHeight(), font->getImageData16(), transparent);
+        graphics->DrawImageRectTransparent(dx, dy, fontsize.width, fontsize.heigt, source_x, source_y,  font->getWidth(), font->getHeight(), font->getImageData16(), RawToColor(transparent));
 
         dx += fontsize.width;
     }

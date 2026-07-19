@@ -38,6 +38,7 @@
 #include <circle/types.h>
 #include <circle/util.h>
 
+#include "utils/Color.h"
 #include "Game.h"
 #include "utils/Image.h"
 #include "utils/Sound.h"

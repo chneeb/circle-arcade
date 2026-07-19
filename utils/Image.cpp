@@ -87,7 +87,7 @@ Image::~Image()
     data = nullptr;
 }
 
-void Image::DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align, TScreenColor transparency, TScreenColor tint)
+void Image::DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align, TRawPixel transparency, TRawPixel tint)
 {
     int dx = x, dy = y;
     switch (align)
@@ -113,7 +113,7 @@ void Image::DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align, TS
     }
     if(transparency != 0xff)
     {
-        graphics->DrawImageTransparent(dx, dy, width, height, data, transparency);
+        graphics->DrawImageTransparent(dx, dy, width, height, data, RawToColor(transparency));
 
         if(tint > 0x00)
         {
@@ -130,13 +130,13 @@ void Image::DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align, TS
 }
 
 
-void Image::DrawTinted(C2DGraphics *gfx,  unsigned nX, unsigned nY, unsigned nWidth, unsigned nHeight, unsigned nSourceX, unsigned nSourceY, unsigned nSourceWidth, unsigned nSourceHeight, TScreenColor *PixelBuffer, TScreenColor TransparentColor, TScreenColor tint)
+void Image::DrawTinted(C2DGraphics *gfx,  unsigned nX, unsigned nY, unsigned nWidth, unsigned nHeight, unsigned nSourceX, unsigned nSourceY, unsigned nSourceWidth, unsigned nSourceHeight, TRawPixel *PixelBuffer, TRawPixel TransparentColor, TRawPixel tint)
 {
     for(unsigned i=0; i<nHeight; i++)
 	{
 		for(unsigned j=0; j<nWidth; j++)
 		{
-			TScreenColor sourcePixel = PixelBuffer[(nSourceY + i) * nSourceWidth + j + nSourceX];
+			TRawPixel sourcePixel = PixelBuffer[(nSourceY + i) * nSourceWidth + j + nSourceX];
 			if(sourcePixel != TransparentColor)
 			{                
                 if(sourcePixel > tint) 
@@ -144,7 +144,7 @@ void Image::DrawTinted(C2DGraphics *gfx,  unsigned nX, unsigned nY, unsigned nWi
                 else
                     sourcePixel = 0x00;
 
-				gfx->GetBuffer()[(nY + i) * gfx->GetWidth() + j + nX] = sourcePixel;
+				((TRawPixel *) gfx->GetBuffer())[(nY + i) * gfx->GetWidth() + j + nX] = sourcePixel;
 			}
 		}
 	}

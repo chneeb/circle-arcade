@@ -18,7 +18,7 @@ public:
 private:
     int cellSize;
     int rotationState;
-    TScreenColor* colors;
+    T2DColor* colors;
     int rowOffset;
     int columnOffset;
 };

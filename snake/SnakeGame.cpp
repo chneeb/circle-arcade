@@ -46,7 +46,7 @@ void SnakeGame::DrawUI(C2DGraphics *graphics)
     
     graphics->DrawRectOutline(offset-5, offset-5, levelWidth+10, levelWidth+10, COLOR16(31,31,31));        
     graphics->DrawRectOutline(offset-3, offset-3, levelWidth+6, levelWidth+6, COLOR16(31,31,31));        
-    graphics->DrawImageTransparent(offset + levelWidth + (screenWidth - levelWidth - imgLogo->getWidth()) / 2, screenHeight/2, imgLogo->getWidth(), imgLogo->getHeight(), imgLogo->getImageData16(), 0x0);
+    graphics->DrawImageTransparent(offset + levelWidth + (screenWidth - levelWidth - imgLogo->getWidth()) / 2, screenHeight/2, imgLogo->getWidth(), imgLogo->getHeight(), imgLogo->getImageData16(), BLACK_COLOR);
     
     writer->Write(centerOfFreeSpace, 50, "Highscore", graphics, C2DGraphics::AlignCenter);
 

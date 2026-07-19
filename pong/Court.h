@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../utils/Color.h"
 #include <circle/2dgraphics.h>
 #include "../utils/Math.h"
 

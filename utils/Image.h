@@ -15,6 +15,7 @@
 #include <circle/util.h>
 #include <circle/alloc.h>
 #include <circle/2dgraphics.h>
+#include "Color.h"
 #define bytes_to_u16(MSB,LSB) (((unsigned int) ((unsigned char) MSB)) & 255)<<8 | (((unsigned char) LSB)&255)
 
 enum ImageAlignment
@@ -39,7 +40,7 @@ private:
 
     bool copy;
 
-    void DrawTinted(C2DGraphics *gfx,  unsigned nX, unsigned nY, unsigned nWidth, unsigned nHeight, unsigned nSourceX, unsigned nSourceY, unsigned nSourceWidth, unsigned nSourceHeight, TScreenColor *PixelBuffer, TScreenColor TransparentColor, TScreenColor tint);
+    void DrawTinted(C2DGraphics *gfx,  unsigned nX, unsigned nY, unsigned nWidth, unsigned nHeight, unsigned nSourceX, unsigned nSourceY, unsigned nSourceWidth, unsigned nSourceHeight, TRawPixel *PixelBuffer, TRawPixel TransparentColor, TRawPixel tint);
 
 public:
 	Image();
@@ -47,7 +48,7 @@ public:
     Image(const char* filename);  
     Image(const Image& other);    
     Image& operator=(const Image&) = delete;
-    void DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align = TopLeft, TScreenColor transparency = 0xff, TScreenColor tint = 0x00);     
+    void DrawAt(int x, int y, C2DGraphics *graphics, ImageAlignment align = TopLeft, TRawPixel transparency = 0xff, TRawPixel tint = 0x00);     
     uint16_t* getImageData16();
     int getWidth();
     int getHeight();

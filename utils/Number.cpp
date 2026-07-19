@@ -34,7 +34,7 @@ void Number::Draw(int x, int y, int number, C2DGraphics *graphics, ImageAlignmen
         int dx = x;
         if(align == Center)
             dx = dx - digitWidth/2;
-        graphics->DrawImageTransparent(dx, y, digitWidth, digitHeight, digits[0].getImageData16(), 0x0 );
+        graphics->DrawImageTransparent(dx, y, digitWidth, digitHeight, digits[0].getImageData16(), BLACK_COLOR);
     } else {
         while (number > 0)
         {
@@ -44,7 +44,7 @@ void Number::Draw(int x, int y, int number, C2DGraphics *graphics, ImageAlignmen
             if(align == Center)
                 dx = dx - (numberWidth/2);
 
-            graphics->DrawImageTransparent(dx, y, digitWidth, digitHeight, digits[digit].getImageData16(), 0x0 );
+            graphics->DrawImageTransparent(dx, y, digitWidth, digitHeight, digits[digit].getImageData16(), BLACK_COLOR);
             number = number / 10;
             digitPosition++;
         }    

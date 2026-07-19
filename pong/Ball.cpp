@@ -12,7 +12,7 @@ Ball::Ball(int radius)
 
 void Ball::Draw(C2DGraphics *graphics)
 {
-    graphics->DrawCircle(x,y, radius, 0xff);
+    graphics->DrawCircle(x,y, radius, RawToColor(0xff));
 }
 
 void Ball::Move() {

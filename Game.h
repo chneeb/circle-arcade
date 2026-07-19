@@ -5,6 +5,7 @@
 #include <circle/timer.h>
 
 #include "utils/Text.h"
+#include "utils/Color.h"
 
 
 

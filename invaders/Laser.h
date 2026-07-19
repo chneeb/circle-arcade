@@ -1,4 +1,5 @@
 #pragma once
+#include "../utils/Color.h"
 #include "../utils/Math.h"
 #include <circle/2dgraphics.h>
 #include <circle/string.h>

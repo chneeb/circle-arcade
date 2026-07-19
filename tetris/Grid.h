@@ -26,5 +26,5 @@ private:
     int numRows;
     int numCols;
     int cellSize;
-    TScreenColor* colors;
+    T2DColor* colors;
 };

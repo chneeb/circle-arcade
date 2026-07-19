@@ -1,19 +1,20 @@
 #pragma once
 
 #include <circle/2dgraphics.h>
+#include "../utils/Color.h"
 
 
 
-extern const TScreenColor darkGrey;
-extern const TScreenColor green;
-extern const TScreenColor red;
-extern const TScreenColor orange;
-extern const TScreenColor yellow;
-extern const TScreenColor purple;
-extern const TScreenColor cyan;
-extern const TScreenColor blue;
-extern const TScreenColor lightBlue;
-extern const TScreenColor darkBlue;
+extern const T2DColor darkGrey;
+extern const T2DColor green;
+extern const T2DColor red;
+extern const T2DColor orange;
+extern const T2DColor yellow;
+extern const T2DColor purple;
+extern const T2DColor cyan;
+extern const T2DColor blue;
+extern const T2DColor lightBlue;
+extern const T2DColor darkBlue;
 
 
-TScreenColor* GetCellColors();
+T2DColor* GetCellColors();
