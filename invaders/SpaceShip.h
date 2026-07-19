@@ -8,7 +8,7 @@
 #include <circle/bcmrandom.h>
 #include <circle/timer.h>
 
-#include "laser.h"
+#include "Laser.h"
 
 class Spaceship{
     public:

@@ -1,5 +1,5 @@
-#include "grid.h"
-#include "colors.h"
+#include "Grid.h"
+#include "Colors.h"
 #include "Grid.h"
 
 

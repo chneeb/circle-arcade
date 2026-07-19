@@ -3,8 +3,8 @@
 #include "../utils/Math.h"
 #include "../utils/Sound.h"
 #include "../utils/FontWriter.h"
-#include "grid.h"
-#include "blocks.cpp"
+#include "Grid.h"
+#include "Blocks.cpp"
 #include <circle/bcmrandom.h>
 #include <circle/2dgraphics.h>
 #include <circle/usb/usbgamepad.h>

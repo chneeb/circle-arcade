@@ -1,4 +1,4 @@
-#include "colors.h"
+#include "Colors.h"
 
 const TScreenColor darkGrey = COLOR16(15, 15, 15);
 const TScreenColor green = COLOR16(6, 28, 3);

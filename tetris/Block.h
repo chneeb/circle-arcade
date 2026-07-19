@@ -1,7 +1,7 @@
 #pragma once
 #include <circle/2dgraphics.h>
-#include "position.h"
-#include "colors.h"
+#include "Position.h"
+#include "Colors.h"
 
 class Block
 {
