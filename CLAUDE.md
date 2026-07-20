@@ -26,6 +26,7 @@ assets are still cut for 640x480 — see [Porting to the GamePi20](#porting-to-t
 - `kernel.cpp` / `kernel.h` — hardware init, SD mount, asset loading, menu, gamepad handling
 - `Game.h` — base class for all games: `Draw(C2DGraphics*)`, `Update(CTimer*)`, `HandleInput(TGamePadState)`
 - `DisplayConfig.h` / `InputConfig.h` — which display and input the build uses, plus the GamePi20 pin numbers
+- `ST7789DMADisplay.{h,cpp}` — the ST7789 driver in use, sending frames over DMA
 - `configure-gamepi20.sh` — configures and builds Circle with the options sound needs
 - `utils/Color.h` — colour helpers for the Circle Step49+ display API (see below)
 - `utils/Image.cpp` — LMI asset loader and blitter, including the tinting path used by the menu
@@ -231,6 +232,39 @@ The SPI clock is 62.5 MHz, the fastest divisor a 250 MHz core allows, and well
 above what the ST7789VW is specified for. Tearing, flicker or intermittent noise
 means step down to 41.7 MHz — a marginal clock looks like a wiring fault.
 
+#### ST7789DMADisplay
+
+`ST7789DMADisplay.{h,cpp}` is the driver actually in use. It is a `CDisplay` of
+our own rather than a subclass, because `CST7789Display` keeps `SendData`,
+`SetWindow`, `Command` and `Data` private — there is nothing for a subclass to
+reuse, and patching the pinned submodule is worse. Writing our own also folds
+MADCTL into the panel's init instead of sending it again afterwards.
+
+`SetArea` copies the frame into a buffer of its own, starts the transfer and
+returns. **It waits for the previous frame at the start of the next call, not at
+the end of its own** — that ordering is what buys the overlap. The copy is what
+makes it safe: `C2DGraphics` has a single buffer, so without it the games would
+draw into pixels still being clocked out.
+
+Three things about Circle's DMA SPI that the headers do not make obvious:
+
+- `StartWriteRead` asserts `nCount <= 0xFFFF`, but a frame is 153,600 bytes. It
+  goes out in chunks of 61,440 — 96 whole rows, and 4-byte aligned as
+  `spimasterdma.h` requires — chained through the completion routine.
+- `StartWriteRead` also asserts a non-null read buffer. That is not waste: with
+  no RX DMA the receive FIFO is never drained and the controller stalls.
+- Chip select is driven **by hand** (`ChipSelectNone` plus a plain output on
+  BCM 8), so it can stay low across every chunk of one frame. Letting the
+  peripheral toggle CE0 per transfer would break the RAMWR stream at each chunk
+  boundary.
+
+The panel is blacked out during init, before the backlight comes on — its memory
+holds power-up garbage otherwise, and lighting it first shows a screenful of
+noise until the first frame lands.
+
+`ST7789_USE_DMA 0` falls back on Circle's polled driver, which is how to tell a
+DMA problem apart from anything else.
+
 ### Input
 
 `InputConfig.h` holds the pin numbers and `USE_GPIO_BUTTONS`. The buttons are
@@ -294,10 +328,10 @@ where the only way to 60 fps is a 256-wide pillarboxed frame (122,880 bytes,
 63.6 fps at 62.5 MHz — about 94% bus utilization) rather than scaling to fill
 the width.
 
-`CST7789Display::SendData` uses `CSPIMaster::Write`, which is **polled and
-blocking** — the CPU spins for the whole transfer. Circle ships `CSPIMasterDMA`,
-and `SetArea` already takes a completion routine, but the ST7789 driver does not
-use it. Anything needing CPU time during a frame has to address this first.
+The frame goes out over DMA (`ST7789_USE_DMA`), so the CPU is free during the
+transfer. Circle's own `CST7789Display::SendData` uses `CSPIMaster::Write`,
+which is polled — the CPU spins for the whole 19.7 ms, most of the budget.
+`ST7789DMADisplay` replaces it; see below.
 
 A Pi Zero 2 W is worth considering: Circle treats it as `RASPPI=3`, it has a
 quad Cortex-A53, and it keeps the GamePi20's form factor and power budget.
