@@ -155,11 +155,12 @@ boolean CST7789DMADisplay::Initialize (void)
 		return FALSE;
 	}
 
+	// The backlight stays off until there is something worth looking at. The
+	// panel's memory holds whatever was in it at power-up, and lighting it
+	// before that has been cleared shows a screenful of garbage.
 	if (m_nBackLightPin != None)
 	{
 		m_BackLightPin.Write (LOW);
-		CTimer::SimpleMsDelay (100);
-		m_BackLightPin.Write (HIGH);
 	}
 
 	if (m_nResetPin != None)
@@ -212,12 +213,50 @@ boolean CST7789DMADisplay::Initialize (void)
 
 	Command (ST7789_INVON);
 	Command (ST7789_SLPOUT);
+	CTimer::SimpleMsDelay (100);
+
+	// Black out the panel's memory before anything is shown, then turn the
+	// display on and only then the backlight. In that order there is never a
+	// moment where power-up garbage is lit.
+	memset (m_pFrameBuffer, 0, m_nWidth * m_nHeight * 2);
+	ClearPanel ();
+
 	Command (ST7789_DISPON);
 	CTimer::SimpleMsDelay (100);
 
-	memset (m_pFrameBuffer, 0, m_nWidth * m_nHeight * 2);
+	if (m_nBackLightPin != None)
+	{
+		m_BackLightPin.Write (HIGH);
+	}
 
 	return TRUE;
+}
+
+// Push the (zeroed) frame buffer out synchronously. Used once, during init,
+// before the asynchronous path is in play.
+void CST7789DMADisplay::ClearPanel (void)
+{
+	SetWindow (0, 0, m_nWidth - 1, m_nHeight - 1);
+
+	unsigned nTotal = m_nWidth * m_nHeight * 2;
+	unsigned nSent = 0;
+
+	m_DCPin.Write (HIGH);
+	m_CSPin.Write (LOW);
+
+	while (nSent < nTotal)
+	{
+		unsigned nRemaining = nTotal - nSent;
+		unsigned nChunk = nRemaining < MaxChunkBytes ? nRemaining : MaxChunkBytes;
+
+		m_SPIMaster.WriteReadSync (m_SPIMaster.ChipSelectNone,
+					   m_pFrameBuffer + nSent,
+					   m_pDummyRXBuffer, nChunk);
+
+		nSent += nChunk;
+	}
+
+	m_CSPin.Write (HIGH);
 }
 
 //

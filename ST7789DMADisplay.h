@@ -71,6 +71,7 @@ private:
 	void Data (u8 uchByte);
 	void WriteBytes (const void *pData, size_t nLength, boolean bIsData);
 	void SetWindow (unsigned x0, unsigned y0, unsigned x1, unsigned y1);
+	void ClearPanel (void);
 
 	void StartNextChunk (void);
 	static void DMACompletionStub (boolean bStatus, void *pParam);
