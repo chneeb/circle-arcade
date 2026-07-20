@@ -37,7 +37,10 @@
 #include <fatfs/ff.h>
 #include <circle/types.h>
 #include <circle/util.h>
+#include <circle/spimaster.h>
+#include <display/st7789display.h>
 
+#include "DisplayConfig.h"
 #include "utils/Color.h"
 #include "Game.h"
 #include "utils/Image.h"
@@ -66,6 +69,9 @@ public:
 
 private:
 	void MenuUpdate();
+#if USE_ST7789 && ST7789_TEST_PATTERN
+	void DrawTestPattern();
+#endif
 	static void GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *pState);
 	static void GamePadRemovedHandler (CDevice *pDevice, void *pContext);
 	static void NormalizeGamePadState (TGamePadState *pState);
@@ -79,6 +85,10 @@ private:
 	CDeviceNameService	m_DeviceNameService;
 	CExceptionHandler	m_ExceptionHandler;
 	CInterruptSystem	m_Interrupt;
+#if USE_ST7789
+	CSPIMaster			m_SPIMaster;
+	CST7789Display		m_ST7789;
+#endif
 	C2DGraphics			m_2DGraphics;
 	CTimer				m_Timer;
 

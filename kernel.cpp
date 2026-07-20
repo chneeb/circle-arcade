@@ -29,8 +29,16 @@ CKernel *CKernel ::s_pThis = 0;
 
 
 
-CKernel::CKernel (void) : 
+CKernel::CKernel (void) :
+#if USE_ST7789
+  m_SPIMaster (ST7789_CLOCK_SPEED, ST7789_CPOL, ST7789_CPHA, ST7789_SPI_DEVICE),
+  m_ST7789 (&m_SPIMaster, ST7789_DC_PIN, ST7789_RESET_PIN, ST7789_BACKLIGHT_PIN,
+	    ST7789_WIDTH, ST7789_HEIGHT, ST7789_CPOL, ST7789_CPHA,
+	    ST7789_CLOCK_SPEED, ST7789_CHIP_SELECT, ST7789_SWAP_COLOR_BYTES),
+  m_2DGraphics(&m_ST7789),
+#else
   m_2DGraphics(m_Options.GetWidth(), m_Options.GetHeight()),
+#endif
   m_Timer(&m_Interrupt),
   m_USBHCI(&m_Interrupt, &m_Timer,TRUE),
   m_EMMC(&m_Interrupt, &m_Timer, &m_ActLED),
@@ -57,6 +65,16 @@ boolean CKernel::Initialize (void)
 {
 	boolean success = TRUE;
 
+#if USE_ST7789
+	if(success)
+	{
+		success = m_SPIMaster.Initialize ();
+	}
+	if(success)
+	{
+		success = m_ST7789.Initialize ();
+	}
+#endif
 	if(success)
 	{
 		success = m_2DGraphics.Initialize ();
@@ -83,6 +101,11 @@ boolean CKernel::Initialize (void)
 
 TShutdownMode CKernel::Run (void)
 {
+#if USE_ST7789 && ST7789_TEST_PATTERN
+	DrawTestPattern ();
+	return ShutdownHalt;
+#endif
+
 	// Mount file system (fail check omitted)
 	f_mount(&m_FileSystem, DRIVE, 1);
 
@@ -95,8 +118,8 @@ TShutdownMode CKernel::Run (void)
 	sndMenu = new Sound("/audio/menu_loop.raw", 2, 16);
 
 	writer = new FontWriter("/gfx/fonts/font_I-pixel-u_20x20_anti.lmi", {20,20});
-	screenHeight = m_Options.GetHeight();
-	screenWidth = m_Options.GetWidth();
+	screenHeight = m_2DGraphics.GetHeight();
+	screenWidth = m_2DGraphics.GetWidth();
 	
 
 
@@ -308,19 +331,19 @@ void CKernel::MenuUpdate()
 		{
 		case 0:
 			if(activeGame != nullptr) delete activeGame;					
-			activeGame = new SnakeGame(m_Options.GetWidth(), m_Options.GetHeight());			
+			activeGame = new SnakeGame(m_2DGraphics.GetWidth(), m_2DGraphics.GetHeight());			
 			break;
 		case 1:
 			if(activeGame != nullptr) delete activeGame;
-			activeGame = new TetrisGame(m_Options.GetWidth(), m_Options.GetHeight());			
+			activeGame = new TetrisGame(m_2DGraphics.GetWidth(), m_2DGraphics.GetHeight());			
 			break;
 		case 2:
 			if(activeGame != nullptr) delete activeGame;
-			activeGame = new PongGame(m_Options.GetWidth(), m_Options.GetHeight());
+			activeGame = new PongGame(m_2DGraphics.GetWidth(), m_2DGraphics.GetHeight());
 			break;
 		case 3:	
 			if(activeGame != nullptr) delete activeGame;
-			activeGame = new InvadersGame(m_Options.GetWidth(), m_Options.GetHeight());
+			activeGame = new InvadersGame(m_2DGraphics.GetWidth(), m_2DGraphics.GetHeight());
 			break;
 		default:
 			break;
@@ -336,6 +359,63 @@ void CKernel::MenuUpdate()
 		keyDelay = 10;
     }
 }
+
+#if USE_ST7789 && ST7789_TEST_PATTERN
+
+// A static pattern to bring the panel up with, before any game code is
+// involved. What it tells you:
+//
+//   - nothing at all      -> wiring, chip select, or the backlight pin
+//   - bars in the wrong   -> ST7789_SWAP_COLOR_BYTES is wrong
+//     colours
+//   - markers in the      -> orientation is mirrored, adjust the MADCTL value
+//     wrong corners          in CST7789Display::Initialize
+//   - a shifted or        -> a GRAM offset is being applied that this 240x320
+//     wrapped image          panel does not need
+//
+void CKernel::DrawTestPattern (void)
+{
+	unsigned nWidth  = m_2DGraphics.GetWidth ();
+	unsigned nHeight = m_2DGraphics.GetHeight ();
+
+	m_2DGraphics.ClearScreen (BLACK_COLOR);
+
+	// Four vertical bars, to check the colour order.
+	const T2DColor Bars[4] =
+	{
+		COLOR16 (31,  0,  0),		// red
+		COLOR16 ( 0, 31,  0),		// green
+		COLOR16 ( 0,  0, 31),		// blue
+		COLOR16 (31, 31, 31)		// white
+	};
+
+	unsigned nBarWidth = nWidth / 4;
+	for (unsigned i = 0; i < 4; i++)
+	{
+		m_2DGraphics.DrawRect (i * nBarWidth, 0, nBarWidth, nHeight, Bars[i]);
+	}
+
+	// A border, to check that the full panel is addressed and that no GRAM
+	// offset is being applied.
+	m_2DGraphics.DrawRectOutline (0, 0, nWidth, nHeight, COLOR16 (31, 31, 0));
+
+	// Corner markers, to check the orientation. Yellow belongs top left,
+	// magenta top right.
+	m_2DGraphics.DrawRect (0, 0, 20, 20, COLOR16 (31, 31, 0));
+	m_2DGraphics.DrawRect (nWidth - 10, 0, 10, 10, COLOR16 (31, 0, 31));
+
+	m_2DGraphics.UpdateDisplay ();
+
+	// Keep the picture up rather than returning into a halt with the panel
+	// left in an undefined state.
+	for (;;)
+	{
+		m_ActLED.Blink (1);
+		m_Timer.MsDelay (1000);
+	}
+}
+
+#endif
 
 void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *pState)
 {
