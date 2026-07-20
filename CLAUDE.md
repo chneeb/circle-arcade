@@ -6,15 +6,27 @@ Four retro games (Tetris, Space Invaders, Snake, Pong) plus a menu, running bare
 metal on a Raspberry Pi via [Circle](https://github.com/rsta2/circle). No OS.
 Circle is a submodule, pinned to a release tag.
 
-Currently targets the Pi 1 / Zero (`RASPPI=1`) with HDMI or composite output, a
-USB gamepad, and audio on the headphone jack. Work is under way to port it to
-the Waveshare GamePi20 handheld — see [Porting to the GamePi20](#porting-to-the-gamepi20).
+Targets the Pi 1 / Zero (`RASPPI=1`). Two hardware configurations, both built
+from the same source and selected at compile time:
+
+| | Frame buffer | Waveshare GamePi20 |
+|---|---|---|
+| Picture | HDMI or composite | ST7789 panel over SPI |
+| Input | USB gamepad | the board's buttons on GPIO |
+| Sound | headphone jack | onboard speaker / jack, GPIO 18 |
+| Selected by | `USE_ST7789 0`, `USE_GPIO_BUTTONS 0` | `USE_ST7789 1`, `USE_GPIO_BUTTONS 1` |
+
+The switches live in `DisplayConfig.h` and `InputConfig.h`. The GamePi20 build
+runs games, menu, input and sound on the device; what is left is mostly that the
+assets are still cut for 640x480 — see [Porting to the GamePi20](#porting-to-the-gamepi20).
 
 ## Key Files
 
 - `main.cpp` — entry point, halts or reboots on the return value of `CKernel::Run()`
 - `kernel.cpp` / `kernel.h` — hardware init, SD mount, asset loading, menu, gamepad handling
 - `Game.h` — base class for all games: `Draw(C2DGraphics*)`, `Update(CTimer*)`, `HandleInput(TGamePadState)`
+- `DisplayConfig.h` / `InputConfig.h` — which display and input the build uses, plus the GamePi20 pin numbers
+- `configure-gamepi20.sh` — configures and builds Circle with the options sound needs
 - `utils/Color.h` — colour helpers for the Circle Step49+ display API (see below)
 - `utils/Image.cpp` — LMI asset loader and blitter, including the tinting path used by the menu
 - `utils/FontWriter.cpp` — bitmap font rendering from an LMI sheet
@@ -27,10 +39,25 @@ assets are in `gfx/` and `audio/`.
 ## Build
 
 ```bash
+./configure-gamepi20.sh      # configures and builds Circle and its addons
+make                         # produces kernel.img
+```
+
+**Use the script, not a bare `./configure`.** Sound needs three options that
+live in `circle/include/circle/sysconfig.h`, inside the submodule, so they are
+passed to Circle's `configure` with `-d` instead of being edited in. `configure`
+writes them to `circle/Config.mk`, which Circle **gitignores** — the script is
+the only record of them. Reconfiguring Circle by hand loses audio, and the only
+symptom is silence. See [Audio](#audio) for why the three belong together.
+
+Without sound, the equivalent by hand is:
+
+```bash
 cd circle && ./configure -r 1 && ./makeall -j$(nproc)
 cd addon/SDCard && make
 cd ../fatfs && make
-cd ../../.. && make          # produces kernel.img
+cd ../display && make        # needed for the ST7789 panel
+cd ../../.. && make
 ```
 
 `-r 1` covers the Pi 1, Zero and Zero W (all ARM1176JZF-S). The Pi 3 and
@@ -67,11 +94,16 @@ Two things that are easy to get wrong and both look like a display failure:
 
 For later rebuilds only `kernel.img` needs recopying.
 
+On the GamePi20 build the resolution in `cmdline.txt` is ignored — the panel is
+a fixed 320x240 and the size is read from it. The file is still worth keeping on
+the card so the same card boots a frame buffer build.
+
 ## Circle Version and the Colour API
 
 Pinned to **Step51**. Step49 is the minimum, because that is where
-`C2DGraphics` gained a `CDisplay *` constructor — which is what will let it
-render to the GamePi20's ST7789 panel instead of the VideoCore framebuffer.
+`C2DGraphics` gained a `CDisplay *` constructor — which is what lets it render
+to the GamePi20's ST7789 panel instead of the VideoCore framebuffer, with no
+change to any game or menu code.
 
 Step49 also split the old RGB565 `TScreenColor` into two distinct roles, and
 both are used here:
@@ -93,9 +125,9 @@ ever look subtly wrong, check that the file in question includes `utils/Color.h`
 
 `C2DGraphics::GetBuffer()` returns `void *` since Step49 and needs a cast to
 `TRawPixel *`. Both the framebuffer path (`DEPTH` = 16) and the ST7789 path
-(`GetDepth()` = 16) are 16bpp, so that cast stays correct after the TFT switch.
+(`GetDepth()` = 16) are 16bpp, so that cast is correct for either display.
 
-## Gamepad Handling
+## USB Gamepad Handling
 
 Circle only fills in the standard direction buttons for pads whose mapping it
 knows (`GamePadPropertyIsKnown`). Cheap HID pads report their D-pad as a hat
@@ -128,9 +160,31 @@ USB socket (the middle one; the outer one is power only).
 
 ## Porting to the GamePi20
 
-Not started. The suite currently runs on HDMI + USB gamepad, which was
-deliberately validated first so that display and input problems can be told
-apart from Circle-upgrade problems.
+Working on hardware: panel, buttons and sound are all running on the device.
+Configured through `DisplayConfig.h`, `InputConfig.h` and
+`configure-gamepi20.sh`.
+
+Bring-up was deliberately staged — Circle upgrade on HDMI first, then the panel
+with a test pattern, then input, then sound — so that a failure at each step
+could only have one cause. `ST7789_TEST_PATTERN` in `DisplayConfig.h` still
+draws that pattern, which is the quickest way to re-check wiring, orientation
+and colour order after touching anything on the display side.
+
+Still open:
+
+- **Assets are cut for 640x480.** The menu background is 640x480 and is dropped
+  whole on a 320x240 panel — `DrawImage` bails out when the image does not fit
+  (`lib/2dgraphics.cpp:435`), so it does not even clip. The games lay out from
+  `screenWidth`/`screenHeight` and mostly cope; Invaders needed real work (see
+  below).
+- **Rendering at 640x480 and halving into the panel** was considered as a way to
+  avoid re-cutting anything: a `CDisplay` wrapper that reports 640x480 and
+  decimates 2:1 in `SetArea`. It costs 4x the rendering plus the decimation, and
+  dropping every other pixel destroys the anti-aliased fonts. Not done.
+- **HDMI and panel at the same time** would be a second `CDisplay` wrapper
+  forwarding `SetArea` to both. Cheap, because Circle owns the source buffer —
+  unlike fbcp on Linux, there is no readback. Both outputs must agree on size
+  and colour model.
 
 ### Hardware (Waveshare GamePi20, BCM numbering)
 
@@ -166,14 +220,62 @@ directory.
   (`CDisplay (bSwapColorBytes ? RGB565_BE : RGB565)`), and the LMI assets are
   plain little-endian RGB565. Getting it wrong makes either the images or every
   drawn colour look wrong, but not both.
+- The panel is mounted upside down, so the picture is turned 180 degrees by
+  inverting the MX and MY bits of MADCTL — `0x70` becomes `0xB0`. That is free;
+  `SetRotation(180)` would have been correct arithmetically but only rotates in
+  software. `Command()` and `Data()` are private in the driver, so
+  `CKernel::RotateDisplay180()` sends the two bytes over the same SPI master and
+  D/C pin, which avoids patching the submodule.
+
+The SPI clock is 62.5 MHz, the fastest divisor a 250 MHz core allows, and well
+above what the ST7789VW is specified for. Tearing, flicker or intermittent noise
+means step down to 41.7 MHz — a marginal clock looks like a wiring fault.
+
+### Input
+
+`InputConfig.h` holds the pin numbers and `USE_GPIO_BUTTONS`. The buttons are
+read once per frame in `CKernel::UpdateButtons()` and presented as a
+`TGamePadState`, so nothing downstream knows whether input came from the board
+or from a USB pad. The two are a compile-time choice, not simultaneous: with
+`USE_GPIO_BUTTONS` the USB gamepad code is compiled out entirely.
+
+The mapping has to work around Circle's constants and the SimpleGamePad ones in
+`utils/SimpleGamePadDefs.h` aliasing each other — `GamePadButtonCircle` and
+`SimpleGamePadButtonSelect` are both `BIT(8)`, `Cross` and
+`SimpleGamePadButtonStart` both `BIT(9)`. Every button is mapped onto something
+the menu or a game already tests: A selects and fires, X restarts, START and
+SELECT go back to the menu. B, Y, TL and TR read correctly but nothing listens.
+
+No debounce is needed — one sample per frame is far slower than contact bounce.
 
 ### Audio
 
-Circle's `USE_PWM_AUDIO_ON_ZERO` in `circle/include/circle/sysconfig.h` defaults
-PWM audio to **GPIO 12 and 13 — which are this board's Up and Right buttons**.
-Also define `USE_GPIO18_FOR_LEFT_PWM_ON_ZERO` and
-`USE_GPIO19_FOR_RIGHT_PWM_ON_ZERO`; BCM 19 is not connected here, so audio ends
-up mono on BCM 18, which is where the earphone jack is.
+Working, mono, on GPIO 18, which feeds both the earphone jack and the onboard
+speaker. Enabled by three options passed through `configure-gamepi20.sh`:
+
+```
+USE_PWM_AUDIO_ON_ZERO
+USE_GPIO18_FOR_LEFT_PWM_ON_ZERO
+USE_GPIO19_FOR_RIGHT_PWM_ON_ZERO
+```
+
+**The three belong together.** `USE_PWM_AUDIO_ON_ZERO` alone puts PWM audio on
+**GPIO 12 and 13 — this board's Up and Right buttons** (`lib/machineinfo.cpp`,
+`GetGPIOPin`), i.e. outputs wired to switches that short to ground when pressed.
+Circle's own comment in `sysconfig.h` warns this may destroy the pins. The other
+two move it to GPIO 18, and to GPIO 19 which is not connected here — hence mono.
+
+To check a build before flashing it, disassemble `GetGPIOPin` and confirm no 12
+or 13 appears:
+
+```bash
+arm-none-eabi-ar x circle/lib/libcircle.a machineinfo.o
+arm-none-eabi-objdump -d machineinfo.o \
+	--disassemble=_ZNK12CMachineInfo10GetGPIOPinE15TGPIOVirtualPin | grep '#1[23]\b'
+```
+
+The settings end up in `circle/Config.mk`, which is gitignored, so they are lost
+by any bare `./configure` — with silence as the only symptom.
 
 ### Performance
 
@@ -200,12 +302,27 @@ use it. Anything needing CPU time during a frame has to address this first.
 A Pi Zero 2 W is worth considering: Circle treats it as `RASPPI=3`, it has a
 quad Cortex-A53, and it keeps the GamePi20's form factor and power budget.
 
-### Known landmine
+### Game layout at 320x240
 
-`screenWidth`/`screenHeight` come from `m_Options` (i.e. `cmdline.txt`). On the
-TFT there is no firmware framebuffer to fall back on, so these should be read
-from the display object instead — `m_2DGraphics.GetWidth()` — which also makes
-the black-screen failure above impossible.
+`screenWidth`/`screenHeight` are read from the display (`m_2DGraphics.GetWidth()`),
+not from `cmdline.txt`. They used to come from `m_Options`, which on the panel
+would have been zero — laying the whole menu out off-screen.
+
+Invaders needed real work, and is worth reading before adapting the others. Its
+alien formation was hardcoded to 11 columns at a 55 px pitch, 594 px wide: on a
+320 px screen `offsetX` came out at -115, so aliens sat off both edges and
+`MoveAliens` saw its left and right turn-around conditions true at the same time,
+marching the formation down every frame. Rows and columns are now derived from
+the space actually available, and a short screen also gets a tighter row pitch
+and 2x rather than 3x obstacles, which is what makes room for a second row.
+640x480 gets 10 x 5, 320x240 gets 4 x 2.
+
+640x480 lost a column in the process. The old 11 reached x=639, past the
+`screenWidth-25` line `MoveAliens` turns around at, so the formation dropped a
+row on its first frame there too.
+
+Eight aliens is sparse. The sprites are up to 44x40 and nothing scales them, so
+that is the ceiling at this resolution without smaller art.
 
 ## Assets
 
