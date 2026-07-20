@@ -21,7 +21,7 @@
 // games. Use this when bringing up the panel: it tells apart wiring problems,
 // a wrong orientation and a wrong colour order, before any game code is
 // involved. Ignored unless USE_ST7789 is 1.
-#define ST7789_TEST_PATTERN	1
+#define ST7789_TEST_PATTERN	0
 
 // The panel is a 240x320 ST7789VW driven in landscape. Circle's init sends
 // MADCTL 0x70, whose MV bit swaps X and Y, so the panel comes up as 320x240
