@@ -123,10 +123,10 @@ void InvadersGame::HandleInput(TGamePadState gamePadState) {
         keyDelay--;
 
 
-    if ((gamePadState.buttons & GamePadButtonLeft) || (gamePadState.axes[0].value == 0)){        
+    if ((gamePadState.buttons & GamePadButtonLeft)){        
         spaceship->MoveLeft();       
     }
-    if ((gamePadState.buttons & GamePadButtonRight) || (gamePadState.axes[0].value == 255)){        
+    if ((gamePadState.buttons & GamePadButtonRight)){        
         spaceship->MoveRight();
     }
     if (keyDelay == 0 && ( (gamePadState.buttons & GamePadButtonCross) || (gamePadState.buttons & SimpleGamePadButtonB) ) ) {

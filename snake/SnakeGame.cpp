@@ -115,22 +115,22 @@ void SnakeGame::checkForHighscore()
 // 0x100 = select, 0x200 = start, 0x01 = B, 0x02 = A
 void SnakeGame::HandleInput(TGamePadState gamePadState)
 {    
-    if (((gamePadState.buttons & GamePadButtonUp) || (gamePadState.axes[1].value == 0)) && snake.direction.y != 1 && allowMove) {
+    if (((gamePadState.buttons & GamePadButtonUp)) && snake.direction.y != 1 && allowMove) {
             snake.direction = {0, -1};
             running = true;
             allowMove = false;
     }
-    if (((gamePadState.buttons & GamePadButtonDown) || (gamePadState.axes[1].value == 255)) && snake.direction.y != -1 && allowMove) {
+    if (((gamePadState.buttons & GamePadButtonDown)) && snake.direction.y != -1 && allowMove) {
             snake.direction = {0, 1};
             running = true;
             allowMove = false;
     }
-    if (((gamePadState.buttons & GamePadButtonLeft) || (gamePadState.axes[0].value == 0))&& snake.direction.x != 1 && allowMove) {
+    if (((gamePadState.buttons & GamePadButtonLeft))&& snake.direction.x != 1 && allowMove) {
             snake.direction = {-1, 0};
             running = true;
             allowMove = false;
     }
-    if (((gamePadState.buttons & GamePadButtonRight) || (gamePadState.axes[0].value == 255)) && snake.direction.x != -1 && allowMove) {
+    if (((gamePadState.buttons & GamePadButtonRight)) && snake.direction.x != -1 && allowMove) {
             snake.direction = {1, 0};
             running = true;
             allowMove = false;

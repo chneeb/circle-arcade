@@ -122,20 +122,20 @@ void TetrisGame::HandleInput(TGamePadState gamePadState)
         Reset();
     }
     
-    if ((gamePadState.buttons & GamePadButtonDown) || (gamePadState.axes[1].value == 255)){        
+    if ((gamePadState.buttons & GamePadButtonDown)){        
         MoveBlockDown();
         UpdateScore(0, 1);
     }
     if ((gamePadState.buttons & GamePadButtonUp) || (gamePadState.buttons & GamePadButtonCross /*also equals SimpleGamePadStart*/) 
-        || (gamePadState.axes[1].value == 0) || (gamePadState.buttons & SimpleGamePadButtonB) ){        
+ || (gamePadState.buttons & SimpleGamePadButtonB) ){        
         RotateBlock();
         keyDelay = 10;
     }
-    if ((gamePadState.buttons & GamePadButtonLeft) || (gamePadState.axes[0].value == 0)){            
+    if ((gamePadState.buttons & GamePadButtonLeft)){            
         MoveBlockLeft();
         keyDelay = 10;
     }
-    if ((gamePadState.buttons & GamePadButtonRight) || (gamePadState.axes[0].value == 255)){            
+    if ((gamePadState.buttons & GamePadButtonRight)){            
         MoveBlockRight();
         keyDelay = 10;
     }

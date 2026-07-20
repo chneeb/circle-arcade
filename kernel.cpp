@@ -234,14 +234,14 @@ void CKernel::MenuUpdate()
 	
 	
 	//Up
-	if (((m_GamePadState.buttons & GamePadButtonUp) || (m_GamePadState.axes[1].value == 0))) {
+	if (m_GamePadState.buttons & GamePadButtonUp) {
         if(selectedIndex > 0)
 			selectedIndex--;
 		keyDelay = 10;
 //		code.push(m_GamePadState.buttons);
     }
 	//Down
-    if (((m_GamePadState.buttons & GamePadButtonDown) || (m_GamePadState.axes[1].value == 255))) {
+    if (m_GamePadState.buttons & GamePadButtonDown) {
         if(selectedIndex < 3)
             selectedIndex++;
 		keyDelay = 10;
@@ -307,6 +307,73 @@ void CKernel::GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *
 	assert (s_pThis != 0);
 	assert (pState != 0);
 	memcpy (&s_pThis->m_GamePadState, pState, sizeof *pState);
+	NormalizeGamePadState (&s_pThis->m_GamePadState);
+}
+
+// Only gamepads with a mapping known to Circle report their D-pad as digital
+// buttons. Cheap pads send it as a hat switch, or as an analog axis pair, and
+// then the direction bits stay empty. Fill them in here, so that the menu and
+// the games can just read buttons, whatever the pad turns out to be.
+void CKernel::NormalizeGamePadState (TGamePadState *pState)
+{
+	// Hat switch: 0 is up, then clockwise in steps of 45 degrees. Any value
+	// outside 0..7 means the hat is centered.
+	if (pState->nhats >= 1)
+	{
+		static const unsigned HatToButtons[8] =
+		{
+			GamePadButtonUp,
+			GamePadButtonUp   | GamePadButtonRight,
+			GamePadButtonRight,
+			GamePadButtonDown | GamePadButtonRight,
+			GamePadButtonDown,
+			GamePadButtonDown | GamePadButtonLeft,
+			GamePadButtonLeft,
+			GamePadButtonUp   | GamePadButtonLeft
+		};
+
+		int nHat = pState->hats[0];
+		if (0 <= nHat && nHat < 8)
+		{
+			pState->buttons |= HatToButtons[nHat];
+		}
+	}
+
+	// Analog axes: the outer quarter of the range counts as a direction. The
+	// range is taken from the pad itself instead of assuming 0..255.
+	if (pState->naxes > (int) GamePadAxisLeftY)
+	{
+		pState->buttons |= AxisToButtons (pState, GamePadAxisLeftX,
+						  GamePadButtonLeft, GamePadButtonRight);
+		pState->buttons |= AxisToButtons (pState, GamePadAxisLeftY,
+						  GamePadButtonUp, GamePadButtonDown);
+	}
+}
+
+unsigned CKernel::AxisToButtons (const TGamePadState *pState, unsigned nAxis,
+				 unsigned nLowButton, unsigned nHighButton)
+{
+	int nMinimum = pState->axes[nAxis].minimum;
+	int nMaximum = pState->axes[nAxis].maximum;
+	int nValue   = pState->axes[nAxis].value;
+
+	int nRange = nMaximum - nMinimum;
+	if (nRange <= 0)
+	{
+		return 0;
+	}
+
+	if (nValue <= nMinimum + nRange/4)
+	{
+		return nLowButton;
+	}
+
+	if (nValue >= nMaximum - nRange/4)
+	{
+		return nHighButton;
+	}
+
+	return 0;
 }
 
 void CKernel::GamePadRemovedHandler (CDevice *pDevice, void *pContext)

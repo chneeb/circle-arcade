@@ -82,10 +82,10 @@ void PongGame::HandleInput(TGamePadState gamePadState)
             keyDelay = 10;
         }
     }
-    if ((gamePadState.buttons & GamePadButtonDown) || (gamePadState.axes[1].value == 255)){        
+    if ((gamePadState.buttons & GamePadButtonDown)){        
         player.MoveDown();        
     }
-    if ((gamePadState.buttons & GamePadButtonUp) || (gamePadState.axes[1].value == 0)){        
+    if ((gamePadState.buttons & GamePadButtonUp)){        
         player.MoveUp();
     }
 

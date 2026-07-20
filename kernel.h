@@ -68,6 +68,9 @@ private:
 	void MenuUpdate();
 	static void GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *pState);
 	static void GamePadRemovedHandler (CDevice *pDevice, void *pContext);
+	static void NormalizeGamePadState (TGamePadState *pState);
+	static unsigned AxisToButtons (const TGamePadState *pState, unsigned nAxis,
+				       unsigned nLowButton, unsigned nHighButton);
 
 
 	// do not change this order
