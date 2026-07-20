@@ -38,6 +38,7 @@
 #include <circle/types.h>
 #include <circle/util.h>
 #include <circle/spimaster.h>
+#include <circle/gpiopin.h>
 #include <display/st7789display.h>
 
 #include "DisplayConfig.h"
@@ -69,6 +70,9 @@ public:
 
 private:
 	void MenuUpdate();
+#if USE_ST7789 && ST7789_ROTATE_180
+	void RotateDisplay180();
+#endif
 #if USE_ST7789 && ST7789_TEST_PATTERN
 	void DrawTestPattern();
 #endif

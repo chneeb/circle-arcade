@@ -74,6 +74,12 @@ boolean CKernel::Initialize (void)
 	{
 		success = m_ST7789.Initialize ();
 	}
+#if ST7789_ROTATE_180
+	if(success)
+	{
+		RotateDisplay180 ();
+	}
+#endif
 #endif
 	if(success)
 	{
@@ -360,6 +366,36 @@ void CKernel::MenuUpdate()
     }
 }
 
+#if USE_ST7789 && ST7789_ROTATE_180
+
+// Turn the picture by 180 degrees in the panel itself.
+//
+// CST7789Display hardcodes MADCTL 0x70 (MX | MV | ML) in its init, and its
+// SetRotation() only rotates in software. Inverting the MX and MY bits gives
+// 0xB0 (MY | MV | ML), which is the same landscape mapping turned around, and
+// costs nothing per frame.
+//
+// Command() and Data() are private in the driver, so the two bytes are sent
+// here over the same SPI master and D/C pin the driver uses.
+void CKernel::RotateDisplay180 (void)
+{
+	static const u8 MadctlCommand = 0x36;
+	static const u8 MadctlRotated = 0xB0;
+
+	CGPIOPin DCPin (ST7789_DC_PIN, GPIOModeOutput);
+
+	m_SPIMaster.SetClock (ST7789_CLOCK_SPEED);
+	m_SPIMaster.SetMode (ST7789_CPOL, ST7789_CPHA);
+
+	DCPin.Write (LOW);
+	m_SPIMaster.Write (ST7789_CHIP_SELECT, &MadctlCommand, sizeof MadctlCommand);
+
+	DCPin.Write (HIGH);
+	m_SPIMaster.Write (ST7789_CHIP_SELECT, &MadctlRotated, sizeof MadctlRotated);
+}
+
+#endif
+
 #if USE_ST7789 && ST7789_TEST_PATTERN
 
 // A static pattern to bring the panel up with, before any game code is
@@ -396,8 +432,13 @@ void CKernel::DrawTestPattern (void)
 	}
 
 	// A border, to check that the full panel is addressed and that no GRAM
-	// offset is being applied.
-	m_2DGraphics.DrawRectOutline (0, 0, nWidth, nHeight, COLOR16 (31, 31, 0));
+	// offset is being applied. Three pixels wide, because one is hard to make
+	// out at the very edge of the panel.
+	for (unsigned i = 0; i < 3; i++)
+	{
+		m_2DGraphics.DrawRectOutline (i, i, nWidth - 2*i, nHeight - 2*i,
+					      COLOR16 (31, 31, 0));
+	}
 
 	// Corner markers, to check the orientation. Yellow belongs top left,
 	// magenta top right.

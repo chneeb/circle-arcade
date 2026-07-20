@@ -50,6 +50,16 @@
 // sets the frame rate ceiling directly - 62.5 MHz is about 51 fps.
 #define ST7789_CLOCK_SPEED	31250000
 
+// The GamePi20 has the panel mounted upside down, so the picture has to be
+// turned by 180 degrees. This is done in the panel, by inverting the MX and MY
+// bits of MADCTL, which costs nothing.
+//
+// Do not use CST7789Display::SetRotation() for this. It is only a software
+// rotation: with a non-zero rotation, SetArea copies every pixel of every
+// frame through an intermediate buffer, which at 76,800 pixels a frame is
+// exactly the work this display cannot afford.
+#define ST7789_ROTATE_180	1
+
 // FALSE selects the RGB565 colour model rather than RGB565_BE. The LMI assets
 // are plain little-endian RGB565, and C2DGraphics converts logical colours
 // through the same model, so both have to agree. If images look right but
