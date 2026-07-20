@@ -19,6 +19,12 @@
 // screen. Useful to find out how a pad sends its D-pad.
 #define GAMEPAD_DEBUG	1
 
+// The axes a gamepad reports its D-pad on. Pads without a mapping known to
+// Circle do not necessarily use the first two: the USB SNES clone tested here
+// uses 3 and 4. Enable GAMEPAD_DEBUG to see which axes a given pad moves.
+#define DPAD_AXIS_X	3
+#define DPAD_AXIS_Y	4
+
 CKernel *CKernel ::s_pThis = 0;
 
 
@@ -373,12 +379,18 @@ void CKernel::NormalizeGamePadState (TGamePadState *pState)
 	}
 
 	// Analog axes: the outer quarter of the range counts as a direction. The
-	// range is taken from the pad itself instead of assuming 0..255.
-	if (pState->naxes > (int) GamePadAxisLeftY)
+	// range is taken from the pad itself instead of assuming 0..255. Only the
+	// configured axes are looked at, so that an unrelated axis resting at one
+	// end of its range cannot read as a direction that is held down forever.
+	if (pState->naxes > DPAD_AXIS_X)
 	{
-		pState->buttons |= AxisToButtons (pState, GamePadAxisLeftX,
+		pState->buttons |= AxisToButtons (pState, DPAD_AXIS_X,
 						  GamePadButtonLeft, GamePadButtonRight);
-		pState->buttons |= AxisToButtons (pState, GamePadAxisLeftY,
+	}
+
+	if (pState->naxes > DPAD_AXIS_Y)
+	{
+		pState->buttons |= AxisToButtons (pState, DPAD_AXIS_Y,
 						  GamePadButtonUp, GamePadButtonDown);
 	}
 }
