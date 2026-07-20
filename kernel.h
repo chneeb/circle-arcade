@@ -71,7 +71,7 @@ public:
 
 private:
 	void MenuUpdate();
-#if USE_ST7789 && ST7789_ROTATE_180
+#if USE_ST7789 && ST7789_ROTATE_180 && !ST7789_USE_DMA
 	void RotateDisplay180();
 #endif
 #if USE_ST7789 && ST7789_TEST_PATTERN
@@ -95,8 +95,12 @@ private:
 	CExceptionHandler	m_ExceptionHandler;
 	CInterruptSystem	m_Interrupt;
 #if USE_ST7789
+#if ST7789_USE_DMA
+	CST7789DMADisplay	m_ST7789;
+#else
 	CSPIMaster			m_SPIMaster;
 	CST7789Display		m_ST7789;
+#endif
 #endif
 	C2DGraphics			m_2DGraphics;
 	CTimer				m_Timer;

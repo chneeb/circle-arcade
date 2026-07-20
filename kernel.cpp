@@ -31,10 +31,17 @@ CKernel *CKernel ::s_pThis = 0;
 
 CKernel::CKernel (void) :
 #if USE_ST7789
+#if ST7789_USE_DMA
+  m_ST7789 (&m_Interrupt, ST7789_DC_PIN, ST7789_RESET_PIN, ST7789_BACKLIGHT_PIN,
+	    ST7789_CS_PIN, ST7789_WIDTH, ST7789_HEIGHT,
+	    ST7789_CLOCK_SPEED, ST7789_CPOL, ST7789_CPHA,
+	    ST7789_MADCTL, ST7789_SWAP_COLOR_BYTES),
+#else
   m_SPIMaster (ST7789_CLOCK_SPEED, ST7789_CPOL, ST7789_CPHA, ST7789_SPI_DEVICE),
   m_ST7789 (&m_SPIMaster, ST7789_DC_PIN, ST7789_RESET_PIN, ST7789_BACKLIGHT_PIN,
 	    ST7789_WIDTH, ST7789_HEIGHT, ST7789_CPOL, ST7789_CPHA,
 	    ST7789_CLOCK_SPEED, ST7789_CHIP_SELECT, ST7789_SWAP_COLOR_BYTES),
+#endif
   m_2DGraphics(&m_ST7789),
 #else
   m_2DGraphics(m_Options.GetWidth(), m_Options.GetHeight()),
@@ -65,16 +72,31 @@ boolean CKernel::Initialize (void)
 {
 	boolean success = TRUE;
 
+	// Interrupts come up first: the DMA display signals the end of a transfer
+	// from an interrupt, and its own init already uses DMA.
+	if(success)
+	{
+		success = m_Interrupt.Initialize();
+	}
+	if(success)
+	{
+		success = m_Timer.Initialize();
+	}
+
 #if USE_ST7789
+#if !ST7789_USE_DMA
 	if(success)
 	{
 		success = m_SPIMaster.Initialize ();
 	}
+#endif
 	if(success)
 	{
 		success = m_ST7789.Initialize ();
 	}
-#if ST7789_ROTATE_180
+#if ST7789_ROTATE_180 && !ST7789_USE_DMA
+	// With DMA the orientation is part of the panel's init, so this is only
+	// needed for Circle's driver, which hardcodes MADCTL 0x70.
 	if(success)
 	{
 		RotateDisplay180 ();
@@ -84,14 +106,6 @@ boolean CKernel::Initialize (void)
 	if(success)
 	{
 		success = m_2DGraphics.Initialize ();
-	}
-	if(success)
-	{
-		success = m_Interrupt.Initialize();
-	}
-	if(success)
-	{
-		success = m_Timer.Initialize();
 	}
 	if(success)
 	{
@@ -449,7 +463,7 @@ void CKernel::UpdateButtons (void)
 
 #endif
 
-#if USE_ST7789 && ST7789_ROTATE_180
+#if USE_ST7789 && ST7789_ROTATE_180 && !ST7789_USE_DMA
 
 // Turn the picture by 180 degrees in the panel itself.
 //

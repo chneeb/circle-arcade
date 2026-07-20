@@ -4,7 +4,7 @@
 
 CIRCLEHOME = circle
 
-OBJS	= main.o kernel.o Game.o 
+OBJS	= main.o kernel.o Game.o ST7789DMADisplay.o 
 OBJS	+= utils/Math.o utils/Deque.o utils/Image.o utils/Text.o utils/Number.o utils/Sound.o utils/FontWriter.o
 OBJS 	+= snake/Snake.o snake/Food.o snake/SnakeGame.o 
 OBJS 	+= tetris/Block.o tetris/Blocks.o tetris/Colors.o tetris/Grid.o tetris/Position.o tetris/TetrisGame.o 

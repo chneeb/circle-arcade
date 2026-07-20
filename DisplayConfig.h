@@ -13,9 +13,19 @@
 #pragma once
 
 #include <display/st7789display.h>
+#include "ST7789DMADisplay.h"
 
 // Set to 1 to render to the ST7789 panel instead of the frame buffer.
 #define USE_ST7789		1
+
+// Set to 1 to drive the panel with ST7789DMADisplay, which starts a frame over
+// DMA and returns, instead of Circle's CST7789Display, whose writes are polled
+// and hold the CPU for the whole 19.7 ms of the transfer. With DMA the next
+// frame is worked out while the current one is still going out.
+//
+// Set it to 0 to fall back on Circle's driver, which is the way to tell a DMA
+// problem apart from anything else. Ignored unless USE_ST7789 is 1.
+#define ST7789_USE_DMA		1
 
 // Set to 1 to draw a static test pattern and stop, instead of running the
 // games. Use this when bringing up the panel: it tells apart wiring problems,
@@ -37,7 +47,13 @@
 #define ST7789_BACKLIGHT_PIN	24
 
 #define ST7789_SPI_DEVICE	0	// SPI0: MOSI 10, SCK 11
-#define ST7789_CHIP_SELECT	0	// CE0 = BCM 8
+#define ST7789_CHIP_SELECT	0	// CE0, for Circle's driver
+
+// With DMA, chip select is driven by hand as an ordinary output, so that it can
+// be held low across the several transfers a frame is split into. The SPI
+// peripheral takes at most 0xFFFF bytes at a time, and letting it toggle CE0
+// per transfer would break the RAMWR stream at every chunk boundary.
+#define ST7789_CS_PIN		8	// CE0 = BCM 8
 
 // CPOL 0 is right because chip select is wired. Circle's own sample uses CPOL 1
 // only because it leaves CS unconnected.
@@ -63,7 +79,15 @@
 // rotation: with a non-zero rotation, SetArea copies every pixel of every
 // frame through an intermediate buffer, which at 76,800 pixels a frame is
 // exactly the work this display cannot afford.
+//
+// With ST7789_USE_DMA the value below is sent as part of the panel's init.
+// With Circle's driver, which hardcodes 0x70, it is sent again afterwards by
+// CKernel::RotateDisplay180().
 #define ST7789_ROTATE_180	1
+
+// MADCTL: MY | MV | ML. MV swaps X and Y, giving landscape; MY rather than MX
+// is what turns the picture around. 0x70 is the same layout the right way up.
+#define ST7789_MADCTL		(ST7789_ROTATE_180 ? 0xB0 : 0x70)
 
 // FALSE selects the RGB565 colour model rather than RGB565_BE. The LMI assets
 // are plain little-endian RGB565, and C2DGraphics converts logical colours
