@@ -42,6 +42,7 @@
 #include <display/st7789display.h>
 
 #include "DisplayConfig.h"
+#include "InputConfig.h"
 #include "utils/Color.h"
 #include "Game.h"
 #include "utils/Image.h"
@@ -79,6 +80,10 @@ private:
 	static void GamePadStatusHandler (unsigned nDeviceIndex, const TGamePadState *pState);
 	static void GamePadRemovedHandler (CDevice *pDevice, void *pContext);
 	static void NormalizeGamePadState (TGamePadState *pState);
+#if USE_GPIO_BUTTONS
+	void InitializeButtons();
+	void UpdateButtons();
+#endif
 	static unsigned AxisToButtons (const TGamePadState *pState, unsigned nAxis,
 				       unsigned nLowButton, unsigned nHighButton);
 
@@ -104,6 +109,10 @@ private:
 
 	CUSBGamePadDevice * volatile m_pGamePad;
 	TGamePadState	   	m_GamePadState;
+#if USE_GPIO_BUTTONS
+	static const unsigned GPIOButtonCount = 12;
+	CGPIOPin			m_ButtonPins[GPIOButtonCount];
+#endif
 	static CKernel		*s_pThis;
 
 	int 				screenWidth;

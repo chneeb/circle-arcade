@@ -102,6 +102,13 @@ boolean CKernel::Initialize (void)
 		success = m_EMMC.Initialize();
 	}
 
+#if USE_GPIO_BUTTONS
+	if(success)
+	{
+		InitializeButtons ();
+	}
+#endif
+
 	return success;
 }
 
@@ -130,7 +137,10 @@ TShutdownMode CKernel::Run (void)
 
 
 	for (unsigned int cycle = 0; 1; cycle++)
-	{	
+	{
+#if USE_GPIO_BUTTONS
+		UpdateButtons ();
+#else
 		boolean bUpdated = m_USBHCI.UpdatePlugAndPlay ();
 
 		if(m_pGamePad == 0)
@@ -160,6 +170,7 @@ TShutdownMode CKernel::Run (void)
 			
 			m_pGamePad->RegisterStatusHandler (GamePadStatusHandler);
 		}
+#endif
 
 		if(activeGame == nullptr || !activeGame->isActive())
 		{
@@ -365,6 +376,78 @@ void CKernel::MenuUpdate()
 		keyDelay = 10;
     }
 }
+
+#if USE_GPIO_BUTTONS
+
+// How the GamePi20's buttons present themselves to the rest of the suite.
+//
+// Note that Circle's own constants and the SimpleGamePad ones in
+// utils/SimpleGamePadDefs.h alias each other: GamePadButtonCircle and
+// SimpleGamePadButtonSelect are both BIT(8), and GamePadButtonCross and
+// SimpleGamePadButtonStart are both BIT(9). The mapping below is chosen so
+// that every button lands on something the menu or a game already tests:
+//
+//   A       select in the menu, fire in Invaders, rotate in Tetris
+//   X       restart after game over
+//   START   back to the menu
+//   SELECT  mute in the menu, and also back to the menu in a game
+//
+// B, Y and the two shoulder buttons are mapped to unused constants for now.
+static const struct
+{
+	unsigned nPin;
+	unsigned nButton;
+}
+s_ButtonMap[] =
+{
+	{ GPIO_BUTTON_UP,	GamePadButtonUp		},
+	{ GPIO_BUTTON_DOWN,	GamePadButtonDown	},
+	{ GPIO_BUTTON_LEFT,	GamePadButtonLeft	},
+	{ GPIO_BUTTON_RIGHT,	GamePadButtonRight	},
+	{ GPIO_BUTTON_A,	GamePadButtonCross	},
+	{ GPIO_BUTTON_B,	GamePadButtonSquare	},
+	{ GPIO_BUTTON_X,	GamePadButtonTriangle	},
+	{ GPIO_BUTTON_Y,	GamePadButtonL3		},
+	{ GPIO_BUTTON_TL,	GamePadButtonL1		},
+	{ GPIO_BUTTON_TR,	GamePadButtonR1		},
+	{ GPIO_BUTTON_SELECT,	GamePadButtonCircle	},
+	{ GPIO_BUTTON_START,	GamePadButtonStart	}
+};
+
+void CKernel::InitializeButtons (void)
+{
+	static_assert (sizeof s_ButtonMap / sizeof s_ButtonMap[0] == GPIOButtonCount,
+		       "s_ButtonMap and GPIOButtonCount disagree");
+
+	for (unsigned i = 0; i < GPIOButtonCount; i++)
+	{
+		m_ButtonPins[i].AssignPin (s_ButtonMap[i].nPin);
+		m_ButtonPins[i].SetMode (GPIOModeInputPullUp);
+	}
+
+	memset (&m_GamePadState, 0, sizeof m_GamePadState);
+	m_GamePadState.nbuttons = GPIOButtonCount;
+}
+
+// The buttons pull their pin to ground, so a LOW level means pressed. Called
+// once per frame; at the frame rate the panel runs at, that is slow enough
+// that contact bounce never shows up.
+void CKernel::UpdateButtons (void)
+{
+	unsigned nButtons = 0;
+
+	for (unsigned i = 0; i < GPIOButtonCount; i++)
+	{
+		if (m_ButtonPins[i].Read () == LOW)
+		{
+			nButtons |= s_ButtonMap[i].nButton;
+		}
+	}
+
+	m_GamePadState.buttons = nButtons;
+}
+
+#endif
 
 #if USE_ST7789 && ST7789_ROTATE_180
 
