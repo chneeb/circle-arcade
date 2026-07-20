@@ -45,10 +45,15 @@
 #define ST7789_CPHA		0
 
 // Circle derives the SPI divisor from the measured core clock, so on a 250 MHz
-// core the reachable rates are 62.5, 41.7 and 31.25 MHz. Start slow: bring the
-// panel up first, then raise this. A full frame is 153,600 bytes, so the clock
-// sets the frame rate ceiling directly - 62.5 MHz is about 51 fps.
-#define ST7789_CLOCK_SPEED	31250000
+// core the reachable rates are 62.5, 41.7 and 31.25 MHz. A full frame is
+// 153,600 bytes, so the clock sets the frame rate ceiling directly: 62.5 MHz
+// is about 51 fps, 41.7 MHz about 34.
+//
+// 62.5 MHz is well above what the ST7789VW is specified for. If the picture
+// starts tearing, flickering or showing intermittent noise, step down to
+// 41666666 - a marginal clock looks like a wiring fault, not like a clock
+// problem.
+#define ST7789_CLOCK_SPEED	62500000
 
 // The GamePi20 has the panel mounted upside down, so the picture has to be
 // turned by 180 degrees. This is done in the panel, by inverting the MX and MY
