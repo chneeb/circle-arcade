@@ -57,22 +57,50 @@ This version is optimized for the Raspberry Pi 1, using one USB-controller. Vide
 
 ##  Final Steps
 
-1. Copy kernel.img to a FAT32 formatted SD card.
+Format an SD card as FAT32 and copy the following into the root of it.
+
+1. Copy kernel.img to the SD card.
 
 2. Copy the necessary boot files to the SD card
 
-    For Raspberry Pi 1, the required boot files are:
+    For the Raspberry Pi 1 and Zero, the required boot files are:
     * bootcode.bin
     * fixup.dat
     * start.elf
- 
-   Refer to the Circle project's documentation for more details.
-3. Edit or create a config.txt file in the SD card root specifying the resolution
-	```bash
+
+   These are not part of this repository. To download them, run `make` in
+   the `circle/boot` directory.
+
+3. Copy `circle/boot/config32.txt` to the SD card and rename it to `config.txt`.
+
+4. Create a `cmdline.txt` file in the SD card root specifying the resolution:
+
+	```
 	width=640 height=480
 	```
-	
-4. Eject SD card, plug it in the RPI, attach a controller and have fun :)
+
+	Note that this goes in `cmdline.txt`, not in `config.txt`. These are Circle
+	kernel options, and `config.txt` is the firmware's own configuration file,
+	which ignores them silently. Without this the suite boots to a black screen,
+	because the menu is laid out relative to a screen size that stays zero.
+
+5. Copy the `gfx` and `audio` directories to the SD card, keeping their names.
+   The games load their graphics and sounds from there at runtime.
+
+6. Eject SD card, plug it in the RPI, attach a controller and have fun :)
+
+The SD card should end up looking like this:
+
+	bootcode.bin
+	start.elf
+	fixup.dat
+	config.txt
+	cmdline.txt
+	kernel.img
+	gfx/
+	audio/
+
+For later rebuilds only kernel.img needs to be copied again.
 
 ## Resources
 
