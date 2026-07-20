@@ -1,8 +1,28 @@
 #include "InvadersGame.h"
 #include "../utils/SimpleGamePadDefs.h"
 #define Y_OFFSET 5
-#define MIN_SPAWN_INTERVAL 450 
+#define MIN_SPAWN_INTERVAL 450
 #define SPAWN_INTERVAL 900
+
+// Alien formation. The pitch is the original spacing; the margin is the same
+// one MoveAliens turns the aliens around at, so the formation never starts
+// outside the area it is allowed to move in.
+#define ALIEN_SPRITE_WIDTH 44
+#define ALIEN_SPRITE_HEIGHT 40
+#define ALIEN_PITCH_X      55
+#define ALIEN_PITCH_Y      55
+#define ALIEN_MARGIN_X     25
+#define ALIEN_MAX_COLUMNS  11
+#define ALIEN_MAX_ROWS     5
+
+// A 320x240 panel cannot fit the full-size furniture. The alien sprites are up
+// to 44x40 and nothing scales them, so on a short screen there is only room for
+// a two-row formation, and only if the obstacles are drawn smaller too. On a
+// 640x480 screen nothing below changes anything.
+#define COMPACT_LAYOUT_MAX_HEIGHT 360
+#define ALIEN_PITCH_Y_COMPACT     (ALIEN_SPRITE_HEIGHT + 2)
+#define OBSTACLE_SCALE            3
+#define OBSTACLE_SCALE_COMPACT    2
 
 InvadersGame::InvadersGame(int width, int height) : Game(width, height)
 {
@@ -169,25 +189,63 @@ void InvadersGame::DeleteInactiveLasers()
     }
 }
 
+bool InvadersGame::IsCompactLayout() const
+{
+    return screenHeight <= COMPACT_LAYOUT_MAX_HEIGHT;
+}
+
 void InvadersGame::CreateObstacles()
 {
-    
-    int obstacleWidth =  (sizeof(Obstacle::grid[0]) / sizeof(Obstacle::grid[0][0])) * 3;
-    int obstacleHeight = (sizeof(Obstacle::grid) / sizeof(Obstacle::grid[0])) * 3;
+
+    int scale = IsCompactLayout() ? OBSTACLE_SCALE_COMPACT : OBSTACLE_SCALE;
+    int obstacleWidth =  (sizeof(Obstacle::grid[0]) / sizeof(Obstacle::grid[0][0])) * scale;
+    int obstacleHeight = (sizeof(Obstacle::grid) / sizeof(Obstacle::grid[0])) * scale;
     float gap = (screenWidth - (4 * obstacleWidth))/5;
+
+    obstacleTop = spaceship->GetRect().y - obstacleHeight - 20;
 
     for(int i = 0; i < 4; i++) {
         float offsetX = (i + 1) * gap + i * obstacleWidth;
-        obstacles.push_back(new Obstacle({offsetX, float(spaceship->GetRect().y - obstacleHeight - 20)}));
-    }    
+        obstacles.push_back(new Obstacle({offsetX, float(obstacleTop)}));
+    }
 }
 
 void InvadersGame::CreateAliens()
 {
-    int offsetX = (screenWidth - (10*55)) / 2;      //center 10 columns, each alien is 50px
     int offsetY = Y_OFFSET + writer->GetFontHeight() + mysteryship->GetHeight();
-    for(int row = 0; row < (screenHeight > 480 ? 5 : 4); row++) {               //Tiresome hack for small screens
-        for(int column = 0; column < 11; column++) {
+
+    // The alien sprites are a fixed size, up to 44x40, and nothing scales them,
+    // so on a small screen the formation has to lose rows and columns rather
+    // than shrink. Work out what actually fits: horizontally inside the margins
+    // that MoveAliens turns the aliens around at, vertically between the score
+    // line and the obstacles.
+    //
+    // A 640x480 screen gets 10 x 5, a 320x240 one 4 x 2. The latter is sparse
+    // but playable; the aliens are simply too big for more to fit.
+    //
+    // 640x480 loses one column against the 11 it used to place. The old
+    // formation was 594 px wide starting at x=45, so it reached x=639 - past
+    // the screenWidth-25 line MoveAliens turns the aliens around at, which made
+    // the formation drop a row on the very first frame. Ten columns start
+    // inside the area they are allowed to move in.
+    int usableWidth  = screenWidth - 2*ALIEN_MARGIN_X;
+    int usableHeight = obstacleTop - offsetY;
+
+    int pitchY = IsCompactLayout() ? ALIEN_PITCH_Y_COMPACT : ALIEN_PITCH_Y;
+
+    int columns = usableWidth / ALIEN_PITCH_X;
+    int rows    = usableHeight / pitchY;
+
+    if(columns > ALIEN_MAX_COLUMNS) columns = ALIEN_MAX_COLUMNS;
+    if(rows > ALIEN_MAX_ROWS)       rows = ALIEN_MAX_ROWS;
+    if(columns < 1)                 columns = 1;
+    if(rows < 1)                    rows = 1;
+
+    int formationWidth = (columns - 1) * ALIEN_PITCH_X + ALIEN_SPRITE_WIDTH;
+    int offsetX = (screenWidth - formationWidth) / 2;
+
+    for(int row = 0; row < rows; row++) {
+        for(int column = 0; column < columns; column++) {
 
             int alienType;
             if(row == 0) {
@@ -198,8 +256,8 @@ void InvadersGame::CreateAliens()
                 alienType = 1;
             }
 
-            float x = offsetX + column * 55;
-            float y = offsetY + row * 55;
+            float x = offsetX + column * ALIEN_PITCH_X;
+            float y = offsetY + row * pitchY;
             aliens.push_back(new Alien(alienType, {x, y}));
         }
     }
@@ -237,7 +295,10 @@ void InvadersGame::AlienShootLaser(CTimer *timer)
     double currentTime = timer->GetTicks();
     if((currentTime - timeLastAlienFired) >= alienLaserShootInterval && !aliens.isEmpty()) {
         
-        int randomIndex = rnd.GetNumber() % (aliens.getSize()-1); 
+        // Not getSize()-1: with one alien left that is a division by zero, and
+        // it also meant the last alien in the array never fired. Reaching one
+        // alien is common now that a small screen holds far fewer of them.
+        int randomIndex = rnd.GetNumber() % aliens.getSize(); 
 //        debugText.Format("Laser triggered from alien %i", randomIndex);
         Alien *alien = aliens[randomIndex];
         

@@ -29,6 +29,7 @@ class InvadersGame : public Game {
         void DeleteInactiveLasers();
         void CreateObstacles();
         void CreateAliens();
+        bool IsCompactLayout() const;
         void MoveAliens();
         void MoveDownAliens(int distance); 
         void AlienShootLaser(CTimer *timer);
@@ -43,7 +44,8 @@ class InvadersGame : public Game {
         Spaceship *spaceship;
         MysteryShip *mysteryship;
         Array<Alien*> aliens = Array<Alien*>();
-        Array<Obstacle*> obstacles = Array<Obstacle*>();        
+        Array<Obstacle*> obstacles = Array<Obstacle*>();
+        int obstacleTop = 0;    // set by CreateObstacles, used to place the aliens
         Array<Laser*> alienLasers = Array<Laser*>();
 
         int aliensDirection;
