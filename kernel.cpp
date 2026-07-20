@@ -17,7 +17,7 @@
 
 // Set to 1 to show what the attached gamepad actually reports, on the menu
 // screen. Useful to find out how a pad sends its D-pad.
-#define GAMEPAD_DEBUG	1
+#define GAMEPAD_DEBUG	0
 
 // The axes a gamepad reports its D-pad on. Pads without a mapping known to
 // Circle do not necessarily use the first two: the USB SNES clone tested here
