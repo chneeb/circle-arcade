@@ -15,6 +15,10 @@
 #define DRIVE		"SD:"
 #define DEVICE_INDEX	1		// "upad1"
 
+// Set to 1 to show what the attached gamepad actually reports, on the menu
+// screen. Useful to find out how a pad sends its D-pad.
+#define GAMEPAD_DEBUG	1
+
 CKernel *CKernel ::s_pThis = 0;
 
 
@@ -171,6 +175,35 @@ void CKernel::MenuUpdate()
 		
 //	m_2DGraphics.DrawText(10,10,WHITE_COLOR, debugText);
 
+#if GAMEPAD_DEBUG
+	{
+		CString line;
+		int y = 10;
+
+		line.Format ("buttons %08X  naxes %d  nhats %d  nbuttons %d",
+			     m_GamePadState.buttons, m_GamePadState.naxes,
+			     m_GamePadState.nhats, m_GamePadState.nbuttons);
+		writer->Write (10, y, line, &m_2DGraphics);
+		y += 22;
+
+		for (int i = 0; i < m_GamePadState.naxes && i < 8; i++)
+		{
+			line.Format ("axis %d = %d  [%d..%d]", i,
+				     m_GamePadState.axes[i].value,
+				     m_GamePadState.axes[i].minimum,
+				     m_GamePadState.axes[i].maximum);
+			writer->Write (10, y, line, &m_2DGraphics);
+			y += 22;
+		}
+
+		for (int i = 0; i < m_GamePadState.nhats && i < 4; i++)
+		{
+			line.Format ("hat %d = %d", i, m_GamePadState.hats[i]);
+			writer->Write (10, y, line, &m_2DGraphics);
+			y += 22;
+		}
+	}
+#endif
 
 	m_2DGraphics.UpdateDisplay();
 
